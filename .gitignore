@@ -1,0 +1,27 @@
+# Secrets — ASLA commit edilmez
+.env
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build & cache
+dist/
+build/
+.cache/
+
+# Editor & OS
+.vscode/
+.DS_Store
+
+# Logs
+*.log
