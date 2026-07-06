@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 type Category = { id: number; name: string };
@@ -16,11 +16,17 @@ type Transaction = {
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+const currencyFormatter = new Intl.NumberFormat("tr-TR", {
+  style: "currency",
+  currency: "TRY",
+});
+
 export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [message, setMessage] = useState("");
 
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
   const [categoryId, setCategoryId] = useState("");
@@ -30,6 +36,8 @@ export default function TransactionsPage() {
 
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
   const [filterCategoryId, setFilterCategoryId] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categorySubmitting, setCategorySubmitting] = useState(false);
@@ -45,6 +53,8 @@ export default function TransactionsPage() {
     const params = new URLSearchParams();
     if (filterType !== "all") params.set("type", filterType);
     if (filterCategoryId) params.set("category_id", filterCategoryId);
+    if (filterDateFrom) params.set("date_from", filterDateFrom);
+    if (filterDateTo) params.set("date_to", filterDateTo);
 
     const res = await apiFetch(`/api/v1/transactions?${params.toString()}`);
     if (res.ok) {
@@ -52,7 +62,7 @@ export default function TransactionsPage() {
     } else {
       setMessage("İşlemler yüklenemedi");
     }
-  }, [filterType, filterCategoryId]);
+  }, [filterType, filterCategoryId, filterDateFrom, filterDateTo]);
 
   useEffect(() => {
     loadCategories();
@@ -62,34 +72,59 @@ export default function TransactionsPage() {
     loadTransactions();
   }, [loadTransactions]);
 
-  async function handleAddTransaction() {
+  function resetForm() {
+    setEditingId(null);
+    setAmount("");
+    setType("expense");
+    setCategoryId("");
+    setDescription("");
+    setDate(todayISO());
+  }
+
+  function startEditing(t: Transaction) {
+    setEditingId(t.id);
+    setAmount(String(t.amount));
+    setType(t.type);
+    setCategoryId(t.category_id ? String(t.category_id) : "");
+    setDescription(t.description ?? "");
+    setDate(t.date);
+  }
+
+  async function handleSubmitTransaction() {
     setSubmitting(true);
     setMessage("");
 
-    const res = await apiFetch("/api/v1/transactions", {
-      method: "POST",
-      body: JSON.stringify({
-        amount: Number(amount),
-        type,
-        category_id: categoryId ? Number(categoryId) : null,
-        description: description || null,
-        date,
-      }),
-    });
+    const payload = {
+      amount: Number(amount),
+      type,
+      category_id: categoryId ? Number(categoryId) : null,
+      description: description || null,
+      date,
+    };
+
+    const res = await apiFetch(
+      editingId ? `/api/v1/transactions/${editingId}` : "/api/v1/transactions",
+      {
+        method: editingId ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (res.ok) {
-      setAmount("");
-      setDescription("");
+      resetForm();
       await loadTransactions();
     } else {
-      setMessage("İşlem eklenemedi");
+      setMessage(editingId ? "İşlem güncellenemedi" : "İşlem eklenemedi");
     }
     setSubmitting(false);
   }
 
   async function handleDeleteTransaction(id: number) {
+    if (!window.confirm("Bu işlemi silmek istediğine emin misin?")) return;
+
     const res = await apiFetch(`/api/v1/transactions/${id}`, { method: "DELETE" });
     if (res.ok) {
+      if (editingId === id) resetForm();
       await loadTransactions();
     } else {
       setMessage("İşlem silinemedi");
@@ -115,6 +150,8 @@ export default function TransactionsPage() {
   }
 
   async function handleDeleteCategory(id: number) {
+    if (!window.confirm("Bu kategoriyi silmek istediğine emin misin?")) return;
+
     const res = await apiFetch(`/api/v1/categories/${id}`, { method: "DELETE" });
     if (res.ok) {
       if (categoryId === String(id)) setCategoryId("");
@@ -130,6 +167,16 @@ export default function TransactionsPage() {
     if (id === null) return "—";
     return categories.find((c) => c.id === id)?.name ?? "—";
   }
+
+  const totals = useMemo(() => {
+    const income = transactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const expense = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    return { income, expense, net: income - expense };
+  }, [transactions]);
 
   return (
     <main className="mx-auto max-w-2xl p-8">
@@ -175,7 +222,9 @@ export default function TransactionsPage() {
       </div>
 
       <div className="mt-6 space-y-3 rounded border p-4">
-        <h2 className="font-semibold">Yeni İşlem Ekle</h2>
+        <h2 className="font-semibold">
+          {editingId ? "İşlemi Düzenle" : "Yeni İşlem Ekle"}
+        </h2>
 
         <div className="flex gap-2">
           <select
@@ -224,18 +273,28 @@ export default function TransactionsPage() {
           className="w-full rounded border p-2"
         />
 
-        <button
-          onClick={handleAddTransaction}
-          disabled={submitting || !amount}
-          className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
-        >
-          {submitting ? "Ekleniyor..." : "Ekle"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSubmitTransaction}
+            disabled={submitting || !amount}
+            className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
+          >
+            {submitting ? "Kaydediliyor..." : editingId ? "Güncelle" : "Ekle"}
+          </button>
+          {editingId && (
+            <button
+              onClick={resetForm}
+              className="rounded border px-4 text-sm hover:bg-gray-50"
+            >
+              Vazgeç
+            </button>
+          )}
+        </div>
 
         {message && <p className="text-sm text-red-600">{message}</p>}
       </div>
 
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex flex-wrap gap-2">
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as "all" | "income" | "expense")}
@@ -258,6 +317,33 @@ export default function TransactionsPage() {
             </option>
           ))}
         </select>
+
+        <input
+          type="date"
+          value={filterDateFrom}
+          onChange={(e) => setFilterDateFrom(e.target.value)}
+          className="rounded border p-2"
+          aria-label="Başlangıç tarihi"
+        />
+        <input
+          type="date"
+          value={filterDateTo}
+          onChange={(e) => setFilterDateTo(e.target.value)}
+          className="rounded border p-2"
+          aria-label="Bitiş tarihi"
+        />
+      </div>
+
+      <div className="mt-4 flex justify-between rounded border p-3 text-sm">
+        <span className="text-green-600">
+          Gelir: {currencyFormatter.format(totals.income)}
+        </span>
+        <span className="text-red-600">
+          Gider: {currencyFormatter.format(totals.expense)}
+        </span>
+        <span className="font-semibold">
+          Net: {currencyFormatter.format(totals.net)}
+        </span>
       </div>
 
       <ul className="mt-4 divide-y rounded border">
@@ -269,19 +355,27 @@ export default function TransactionsPage() {
             <div>
               <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
                 {t.type === "income" ? "+" : "-"}
-                {t.amount}
+                {currencyFormatter.format(t.amount)}
               </span>
               <span className="ml-2 text-gray-500">
                 {categoryName(t.category_id)} · {t.date}
               </span>
               {t.description && <span className="ml-2">{t.description}</span>}
             </div>
-            <button
-              onClick={() => handleDeleteTransaction(t.id)}
-              className="text-gray-400 hover:text-red-600"
-            >
-              Sil
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => startEditing(t)}
+                className="text-gray-400 hover:text-black"
+              >
+                Düzenle
+              </button>
+              <button
+                onClick={() => handleDeleteTransaction(t.id)}
+                className="text-gray-400 hover:text-red-600"
+              >
+                Sil
+              </button>
+            </div>
           </li>
         ))}
       </ul>
