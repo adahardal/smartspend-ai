@@ -31,7 +31,8 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthPage = path.startsWith("/login") || path.startsWith("/register");
-  const isProtectedPage = path.startsWith("/dashboard");
+  const isProtectedPage =
+    path.startsWith("/dashboard") || path.startsWith("/transactions");
 
   // Giriş yapmamış kullanıcı korumalı sayfaya gidemez
   if (!user && isProtectedPage) {

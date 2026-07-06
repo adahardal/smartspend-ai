@@ -6,7 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
+import models  # noqa: E402, F401 (registers models with Base.metadata)
+from database import Base, engine  # noqa: E402
+from routers import categories, transactions  # noqa: E402
 from security import get_current_user_id  # noqa: E402
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SmartSpend AI API")
 
@@ -17,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(categories.router)
+app.include_router(transactions.router)
 
 
 @app.get("/healthz")

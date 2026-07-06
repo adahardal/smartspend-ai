@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "./logout-button";
 
@@ -39,6 +40,13 @@ export default async function DashboardPage() {
       </div>
       <p className="mt-2 text-gray-600">Hoş geldin, {user?.email} 👋</p>
       <p className="mt-4 rounded border p-3 text-sm">{backendStatus}</p>
+
+      <Link
+        href="/transactions"
+        className="mt-4 inline-block rounded bg-black px-4 py-2 text-sm text-white"
+      >
+        İşlemlere Git
+      </Link>
     </main>
   );
 }
