@@ -12,10 +12,12 @@ import {
   ShoppingCart,
   Tag,
   Trash2,
+  Upload,
   UtensilsCrossed,
   Wallet,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
@@ -221,7 +223,16 @@ export default function TransactionsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">İşlemler</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">İşlemler</h1>
+        <Link
+          href="/transactions/import"
+          className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50"
+        >
+          <Upload className="h-4 w-4" />
+          İçe Aktar
+        </Link>
+      </div>
 
       <div className="mt-6 space-y-3 rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="font-semibold">Kategoriler</h2>
