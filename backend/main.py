@@ -8,7 +8,7 @@ load_dotenv()
 
 import models  # noqa: E402, F401 (registers models with Base.metadata)
 from database import Base, engine  # noqa: E402
-from routers import categories, transactions  # noqa: E402
+from routers import categories, summary, transactions  # noqa: E402
 from security import get_current_user_id  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(categories.router)
 app.include_router(transactions.router)
+app.include_router(summary.router)
 
 
 @app.get("/healthz")
