@@ -29,6 +29,21 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setMessage("");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setMessage("Hata: " + error.message);
+    }
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-4">
@@ -59,6 +74,19 @@ export default function LoginPage() {
         </button>
 
         {message && <p className="text-sm text-red-600">{message}</p>}
+
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="h-px flex-1 bg-gray-200" />
+          veya
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <button
+          onClick={handleGoogleLogin}
+          className="w-full rounded border p-2 font-medium hover:bg-gray-50"
+        >
+          Google ile Giriş Yap
+        </button>
       </div>
     </main>
   );
