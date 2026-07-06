@@ -1,5 +1,21 @@
 "use client";
 
+import {
+  Car,
+  Ellipsis,
+  FileText,
+  HeartPulse,
+  Pencil,
+  Plus,
+  Popcorn,
+  Search,
+  ShoppingCart,
+  Tag,
+  Trash2,
+  UtensilsCrossed,
+  Wallet,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
@@ -21,9 +37,26 @@ const currencyFormatter = new Intl.NumberFormat("tr-TR", {
   currency: "TRY",
 });
 
+const CATEGORY_ICONS: Record<string, typeof Tag> = {
+  Yemek: UtensilsCrossed,
+  Ulaşım: Car,
+  Fatura: FileText,
+  Market: ShoppingCart,
+  Eğlence: Popcorn,
+  Sağlık: HeartPulse,
+  Maaş: Wallet,
+  Diğer: Ellipsis,
+};
+
+function CategoryIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = CATEGORY_ICONS[name] ?? Tag;
+  return <Icon className={className} />;
+}
+
 export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -38,6 +71,7 @@ export default function TransactionsPage() {
   const [filterCategoryId, setFilterCategoryId] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [search, setSearch] = useState("");
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categorySubmitting, setCategorySubmitting] = useState(false);
@@ -62,6 +96,7 @@ export default function TransactionsPage() {
     } else {
       setMessage("İşlemler yüklenemedi");
     }
+    setLoading(false);
   }, [filterType, filterCategoryId, filterDateFrom, filterDateTo]);
 
   useEffect(() => {
@@ -168,36 +203,43 @@ export default function TransactionsPage() {
     return categories.find((c) => c.id === id)?.name ?? "—";
   }
 
+  const visibleTransactions = useMemo(() => {
+    if (!search.trim()) return transactions;
+    const q = search.trim().toLowerCase();
+    return transactions.filter((t) => t.description?.toLowerCase().includes(q));
+  }, [transactions, search]);
+
   const totals = useMemo(() => {
-    const income = transactions
+    const income = visibleTransactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + Number(t.amount), 0);
-    const expense = transactions
+    const expense = visibleTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount), 0);
     return { income, expense, net: income - expense };
-  }, [transactions]);
+  }, [visibleTransactions]);
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
+    <div>
       <h1 className="text-2xl font-bold">İşlemler</h1>
 
-      <div className="mt-6 space-y-3 rounded border p-4">
+      <div className="mt-6 space-y-3 rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="font-semibold">Kategoriler</h2>
 
         <div className="flex flex-wrap gap-2">
           {categories.map((c) => (
             <span
               key={c.id}
-              className="flex items-center gap-1 rounded-full border px-3 py-1 text-sm"
+              className="flex items-center gap-1.5 rounded-full border bg-gray-50 px-3 py-1 text-sm"
             >
+              <CategoryIcon name={c.name} className="h-3.5 w-3.5 text-gray-500" />
               {c.name}
               <button
                 onClick={() => handleDeleteCategory(c.id)}
                 className="text-gray-400 hover:text-red-600"
                 aria-label={`${c.name} kategorisini sil`}
               >
-                ×
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           ))}
@@ -209,19 +251,20 @@ export default function TransactionsPage() {
             placeholder="Yeni kategori adı"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
-            className="w-full rounded border p-2"
+            className="w-full rounded-lg border p-2 text-sm"
           />
           <button
             onClick={handleAddCategory}
             disabled={categorySubmitting || !newCategoryName.trim()}
-            className="rounded bg-black px-4 text-white disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
           >
+            <Plus className="h-4 w-4" />
             Ekle
           </button>
         </div>
       </div>
 
-      <div className="mt-6 space-y-3 rounded border p-4">
+      <div className="mt-6 space-y-3 rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="font-semibold">
           {editingId ? "İşlemi Düzenle" : "Yeni İşlem Ekle"}
         </h2>
@@ -230,7 +273,7 @@ export default function TransactionsPage() {
           <select
             value={type}
             onChange={(e) => setType(e.target.value as "income" | "expense")}
-            className="rounded border p-2"
+            className="rounded-lg border p-2 text-sm"
           >
             <option value="expense">Gider</option>
             <option value="income">Gelir</option>
@@ -241,14 +284,14 @@ export default function TransactionsPage() {
             placeholder="Tutar"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full rounded border p-2"
+            className="w-full rounded-lg border p-2 text-sm"
           />
         </div>
 
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded border p-2"
+          className="w-full rounded-lg border p-2 text-sm"
         >
           <option value="">Kategori seç (opsiyonel)</option>
           {categories.map((c) => (
@@ -263,28 +306,29 @@ export default function TransactionsPage() {
           placeholder="Açıklama (opsiyonel)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full rounded border p-2"
+          className="w-full rounded-lg border p-2 text-sm"
         />
 
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded border p-2"
+          className="w-full rounded-lg border p-2 text-sm"
         />
 
         <div className="flex gap-2">
           <button
             onClick={handleSubmitTransaction}
             disabled={submitting || !amount}
-            className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-black p-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
           >
+            {!editingId && <Plus className="h-4 w-4" />}
             {submitting ? "Kaydediliyor..." : editingId ? "Güncelle" : "Ekle"}
           </button>
           {editingId && (
             <button
               onClick={resetForm}
-              className="rounded border px-4 text-sm hover:bg-gray-50"
+              className="rounded-lg border px-4 text-sm hover:bg-gray-50"
             >
               Vazgeç
             </button>
@@ -298,7 +342,7 @@ export default function TransactionsPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value as "all" | "income" | "expense")}
-          className="rounded border p-2"
+          className="rounded-lg border bg-white p-2 text-sm"
         >
           <option value="all">Tümü</option>
           <option value="expense">Gider</option>
@@ -308,7 +352,7 @@ export default function TransactionsPage() {
         <select
           value={filterCategoryId}
           onChange={(e) => setFilterCategoryId(e.target.value)}
-          className="rounded border p-2"
+          className="rounded-lg border bg-white p-2 text-sm"
         >
           <option value="">Tüm kategoriler</option>
           {categories.map((c) => (
@@ -322,19 +366,30 @@ export default function TransactionsPage() {
           type="date"
           value={filterDateFrom}
           onChange={(e) => setFilterDateFrom(e.target.value)}
-          className="rounded border p-2"
+          className="rounded-lg border bg-white p-2 text-sm"
           aria-label="Başlangıç tarihi"
         />
         <input
           type="date"
           value={filterDateTo}
           onChange={(e) => setFilterDateTo(e.target.value)}
-          className="rounded border p-2"
+          className="rounded-lg border bg-white p-2 text-sm"
           aria-label="Bitiş tarihi"
         />
+
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Açıklamada ara..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border bg-white p-2 pl-8 text-sm"
+          />
+        </div>
       </div>
 
-      <div className="mt-4 flex justify-between rounded border p-3 text-sm">
+      <div className="mt-4 flex justify-between rounded-xl border bg-white p-3 text-sm shadow-sm">
         <span className="text-green-600">
           Gelir: {currencyFormatter.format(totals.income)}
         </span>
@@ -346,39 +401,47 @@ export default function TransactionsPage() {
         </span>
       </div>
 
-      <ul className="mt-4 divide-y rounded border">
-        {transactions.length === 0 && (
+      <ul className="mt-4 divide-y rounded-xl border bg-white shadow-sm">
+        {loading && (
+          <li className="p-4 text-sm text-gray-500">Yükleniyor...</li>
+        )}
+        {!loading && visibleTransactions.length === 0 && (
           <li className="p-4 text-sm text-gray-500">Henüz işlem yok.</li>
         )}
-        {transactions.map((t) => (
+        {visibleTransactions.map((t) => (
           <li key={t.id} className="flex items-center justify-between p-3 text-sm">
-            <div>
-              <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
-                {t.type === "income" ? "+" : "-"}
-                {currencyFormatter.format(t.amount)}
-              </span>
-              <span className="ml-2 text-gray-500">
-                {categoryName(t.category_id)} · {t.date}
-              </span>
-              {t.description && <span className="ml-2">{t.description}</span>}
+            <div className="flex items-center gap-2">
+              <CategoryIcon name={categoryName(t.category_id)} className="h-4 w-4 text-gray-400" />
+              <div>
+                <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
+                  {t.type === "income" ? "+" : "-"}
+                  {currencyFormatter.format(t.amount)}
+                </span>
+                <span className="ml-2 text-gray-500">
+                  {categoryName(t.category_id)} · {t.date}
+                </span>
+                {t.description && <span className="ml-2">{t.description}</span>}
+              </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => startEditing(t)}
                 className="text-gray-400 hover:text-black"
+                aria-label="İşlemi düzenle"
               >
-                Düzenle
+                <Pencil className="h-4 w-4" />
               </button>
               <button
                 onClick={() => handleDeleteTransaction(t.id)}
                 className="text-gray-400 hover:text-red-600"
+                aria-label="İşlemi sil"
               >
-                Sil
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           </li>
         ))}
       </ul>
-    </main>
+    </div>
   );
 }

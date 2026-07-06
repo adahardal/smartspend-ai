@@ -69,3 +69,45 @@ def get_summary_by_category(
         {"category_id": category_id, "category_name": name, "total": float(total)}
         for category_id, name, total in db.execute(query)
     ]
+
+
+@router.get("/monthly")
+def get_monthly_summary(
+    months: int = 6,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    today = date.today()
+    month_starts = []
+    year, month = today.year, today.month
+    for _ in range(months):
+        month_starts.append(date(year, month, 1))
+        month -= 1
+        if month == 0:
+            month, year = 12, year - 1
+    month_starts.reverse()
+
+    query = (
+        select(
+            func.date_trunc("month", models.Transaction.date),
+            models.Transaction.type,
+            func.sum(models.Transaction.amount),
+        )
+        .where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.date >= month_starts[0],
+        )
+        .group_by(func.date_trunc("month", models.Transaction.date), models.Transaction.type)
+    )
+
+    totals = {m.strftime("%Y-%m"): {"income": 0.0, "expense": 0.0} for m in month_starts}
+
+    for month_start, t_type, total in db.execute(query):
+        key = month_start.strftime("%Y-%m")
+        if key in totals:
+            totals[key][t_type] = float(total)
+
+    return [
+        {"month": key, "income": values["income"], "expense": values["expense"]}
+        for key, values in totals.items()
+    ]

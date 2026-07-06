@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "./dashboard-charts";
-import { LogoutButton } from "./logout-button";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -11,9 +10,22 @@ type CategoryTotal = {
   total: number;
 };
 
+type MonthlyTotal = {
+  month: string;
+  income: number;
+  expense: number;
+};
+
 function firstDayOfMonthISO() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function formatMonthLabel(isoMonth: string) {
+  const [year, month] = isoMonth.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("tr-TR", {
+    month: "short",
+  });
 }
 
 export default async function DashboardPage() {
@@ -32,14 +44,19 @@ export default async function DashboardPage() {
   let expense = 0;
   let net = 0;
   let categoryTotals: CategoryTotal[] = [];
+  let monthlyTotals: MonthlyTotal[] = [];
 
   try {
-    const [summaryRes, byCategoryRes] = await Promise.all([
+    const [summaryRes, byCategoryRes, monthlyRes] = await Promise.all([
       fetch(`${API_URL}/api/v1/summary?date_from=${dateFrom}`, {
         headers: authHeaders,
         cache: "no-store",
       }),
       fetch(`${API_URL}/api/v1/summary/by-category?type=expense&date_from=${dateFrom}`, {
+        headers: authHeaders,
+        cache: "no-store",
+      }),
+      fetch(`${API_URL}/api/v1/summary/monthly?months=6`, {
         headers: authHeaders,
         cache: "no-store",
       }),
@@ -54,16 +71,17 @@ export default async function DashboardPage() {
     if (byCategoryRes.ok) {
       categoryTotals = await byCategoryRes.json();
     }
+    if (monthlyRes.ok) {
+      const raw: MonthlyTotal[] = await monthlyRes.json();
+      monthlyTotals = raw.map((m) => ({ ...m, month: formatMonthLabel(m.month) }));
+    }
   } catch {
     // backend kapalıysa kartlar 0 görünür
   }
 
   return (
-    <main className="mx-auto max-w-2xl p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <LogoutButton />
-      </div>
+    <div>
+      <h1 className="text-2xl font-bold">Dashboard</h1>
       <p className="mt-2 text-gray-600">Hoş geldin, {user?.email} 👋</p>
 
       <DashboardCharts
@@ -71,14 +89,15 @@ export default async function DashboardPage() {
         expense={expense}
         net={net}
         categoryTotals={categoryTotals}
+        monthlyTotals={monthlyTotals}
       />
 
       <Link
         href="/transactions"
-        className="mt-6 inline-block rounded bg-black px-4 py-2 text-sm text-white"
+        className="mt-6 inline-block rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
       >
         İşlemlere Git
       </Link>
-    </main>
+    </div>
   );
 }
