@@ -102,16 +102,19 @@ export function DashboardCharts({
         {categoryTotals.length === 0 ? (
           <p className="text-sm text-gray-500">Bu ay henüz gider yok.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
+          <ResponsiveContainer width="100%" height={320}>
+            <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
               <Pie
                 data={categoryTotals}
                 dataKey="total"
                 nameKey="category_name"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                label={(entry: { name?: string }) => entry.name ?? ""}
+                outerRadius={90}
+                labelLine={false}
+                label={({ percent }: { percent?: number }) =>
+                  percent && percent > 0.04 ? `${Math.round(percent * 100)}%` : ""
+                }
               >
                 {categoryTotals.map((entry, index) => (
                   <Cell
@@ -121,7 +124,7 @@ export function DashboardCharts({
                 ))}
               </Pie>
               <Tooltip formatter={(value) => currencyFormatter.format(Number(value))} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
         )}
