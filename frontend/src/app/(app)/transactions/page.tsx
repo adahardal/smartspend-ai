@@ -10,6 +10,7 @@ import {
   Popcorn,
   Search,
   ShoppingCart,
+  Sparkles,
   Tag,
   Trash2,
   Upload,
@@ -211,27 +212,77 @@ export default function TransactionsPage() {
     return transactions.filter((t) => t.description?.toLowerCase().includes(q));
   }, [transactions, search]);
 
+  const incomeRows = useMemo(
+    () => visibleTransactions.filter((t) => t.type === "income"),
+    [visibleTransactions]
+  );
+  const expenseRows = useMemo(
+    () => visibleTransactions.filter((t) => t.type === "expense"),
+    [visibleTransactions]
+  );
+
   const totals = useMemo(() => {
-    const income = visibleTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-    const expense = visibleTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const income = incomeRows.reduce((sum, t) => sum + Number(t.amount), 0);
+    const expense = expenseRows.reduce((sum, t) => sum + Number(t.amount), 0);
     return { income, expense, net: income - expense };
-  }, [visibleTransactions]);
+  }, [incomeRows, expenseRows]);
+
+  function renderRow(t: Transaction) {
+    return (
+      <li key={t.id} className="flex items-center justify-between p-3 text-sm">
+        <div className="flex items-center gap-2">
+          <CategoryIcon name={categoryName(t.category_id)} className="h-4 w-4 text-gray-400" />
+          <div>
+            <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
+              {t.type === "income" ? "+" : "-"}
+              {currencyFormatter.format(t.amount)}
+            </span>
+            <span className="ml-2 text-gray-500">
+              {categoryName(t.category_id)} · {t.date}
+            </span>
+            {t.description && <span className="ml-2">{t.description}</span>}
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => startEditing(t)}
+            className="text-gray-400 hover:text-black"
+            aria-label="İşlemi düzenle"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteTransaction(t.id)}
+            className="text-gray-400 hover:text-red-600"
+            aria-label="İşlemi sil"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">İşlemler</h1>
-        <Link
-          href="/transactions/import"
-          className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50"
-        >
-          <Upload className="h-4 w-4" />
-          İçe Aktar
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/transactions/categorize"
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50"
+          >
+            <Sparkles className="h-4 w-4" />
+            Otomatik Kategorilendir
+          </Link>
+          <Link
+            href="/transactions/import"
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50"
+          >
+            <Upload className="h-4 w-4" />
+            İçe Aktar
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 space-y-3 rounded-xl border bg-white p-4 shadow-sm">
@@ -412,47 +463,45 @@ export default function TransactionsPage() {
         </span>
       </div>
 
-      <ul className="mt-4 divide-y rounded-xl border bg-white shadow-sm">
-        {loading && (
-          <li className="p-4 text-sm text-gray-500">Yükleniyor...</li>
-        )}
-        {!loading && visibleTransactions.length === 0 && (
-          <li className="p-4 text-sm text-gray-500">Henüz işlem yok.</li>
-        )}
-        {visibleTransactions.map((t) => (
-          <li key={t.id} className="flex items-center justify-between p-3 text-sm">
-            <div className="flex items-center gap-2">
-              <CategoryIcon name={categoryName(t.category_id)} className="h-4 w-4 text-gray-400" />
-              <div>
-                <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
-                  {t.type === "income" ? "+" : "-"}
-                  {currencyFormatter.format(t.amount)}
-                </span>
-                <span className="ml-2 text-gray-500">
-                  {categoryName(t.category_id)} · {t.date}
-                </span>
-                {t.description && <span className="ml-2">{t.description}</span>}
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => startEditing(t)}
-                className="text-gray-400 hover:text-black"
-                aria-label="İşlemi düzenle"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => handleDeleteTransaction(t.id)}
-                className="text-gray-400 hover:text-red-600"
-                aria-label="İşlemi sil"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {loading && (
+        <div className="mt-4 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
+          Yükleniyor...
+        </div>
+      )}
+
+      {!loading && visibleTransactions.length === 0 && (
+        <div className="mt-4 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
+          Henüz işlem yok.
+        </div>
+      )}
+
+      {!loading && filterType !== "expense" && incomeRows.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-green-700">Gelir</h2>
+            <span className="text-sm font-medium text-green-600">
+              {currencyFormatter.format(totals.income)}
+            </span>
+          </div>
+          <ul className="divide-y rounded-xl border bg-white shadow-sm">
+            {incomeRows.map(renderRow)}
+          </ul>
+        </div>
+      )}
+
+      {!loading && filterType !== "income" && expenseRows.length > 0 && (
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-red-700">Gider</h2>
+            <span className="text-sm font-medium text-red-600">
+              {currencyFormatter.format(totals.expense)}
+            </span>
+          </div>
+          <ul className="divide-y rounded-xl border bg-white shadow-sm">
+            {expenseRows.map(renderRow)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
