@@ -11,7 +11,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  async function handleLogin() {
+  async function handleLogin(e?: React.FormEvent) {
+    e?.preventDefault();
     setLoading(true);
     setMessage("");
 
@@ -49,29 +50,31 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-4">
         <h1 className="text-2xl font-bold">SmartSpend AI — Giriş Yap</h1>
 
-        <input
-          type="email"
-          placeholder="E-posta"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded border p-2"
-        />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="email"
+            placeholder="E-posta"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded border p-2"
+          />
 
-        <input
-          type="password"
-          placeholder="Şifre"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded border p-2"
-        />
+          <input
+            type="password"
+            placeholder="Şifre"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded border p-2"
+          />
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
-        >
-          {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded bg-black p-2 text-white disabled:opacity-50"
+          >
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          </button>
+        </form>
 
         {message && <p className="text-sm text-red-600">{message}</p>}
 

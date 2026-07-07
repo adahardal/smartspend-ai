@@ -1,6 +1,6 @@
 "use client";
 
-import { PiggyBank, Scale, TrendingDown, TrendingUp } from "lucide-react";
+import { ChartPie, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -96,7 +96,7 @@ export function DashboardCharts({
 
       <div className="rounded-xl border bg-white p-4 shadow-sm">
         <h2 className="mb-2 flex items-center gap-2 font-semibold">
-          <PiggyBank className="h-4 w-4" />
+          <ChartPie className="h-4 w-4" />
           Bu Ay Nereye Gitti Param?
         </h2>
         {categoryTotals.length === 0 ? (

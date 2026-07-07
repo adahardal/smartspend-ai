@@ -1,6 +1,14 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -36,3 +44,22 @@ class Transaction(Base):
     )
 
     category: Mapped["Category | None"] = relationship(back_populates="transactions")
+
+
+class Budget(Base):
+    __tablename__ = "budgets"
+    __table_args__ = (
+        UniqueConstraint("user_id", "category_id", name="uq_budget_user_category"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=False
+    )
+    amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    category: Mapped["Category"] = relationship()
