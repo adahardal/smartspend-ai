@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -15,7 +16,11 @@ export default function RegisterPage() {
     setMessage("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name.trim() } },
+    });
 
     if (error) {
       setMessage("Hata: " + error.message);
@@ -46,6 +51,15 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold">SmartSpend AI — Kayıt Ol</h1>
 
         <form onSubmit={handleRegister} className="space-y-4">
+          <input
+            type="text"
+            placeholder="Ad Soyad"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded border p-2"
+            required
+          />
+
           <input
             type="email"
             placeholder="E-posta"

@@ -82,7 +82,9 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold">Dashboard</h1>
-      <p className="mt-2 text-gray-600">Hoş geldin, {user?.email} 👋</p>
+      <p className="mt-2 text-gray-600">
+        Hoş geldin, {user?.user_metadata?.full_name || user?.email} 👋
+      </p>
 
       <DashboardCharts
         income={income}
