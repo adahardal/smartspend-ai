@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FileText,
   LayoutDashboard,
   MessageCircle,
   Receipt,
@@ -17,6 +18,7 @@ const links = [
   { href: "/transactions", label: "İşlemler", icon: Receipt },
   { href: "/budgets", label: "Bütçeler", icon: Target },
   { href: "/subscriptions", label: "Abonelikler", icon: Repeat },
+  { href: "/report", label: "Rapor", icon: FileText },
   { href: "/coach", label: "Koç", icon: MessageCircle },
 ];
 

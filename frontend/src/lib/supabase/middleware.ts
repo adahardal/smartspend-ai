@@ -36,6 +36,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/transactions") ||
     path.startsWith("/budgets") ||
     path.startsWith("/subscriptions") ||
+    path.startsWith("/report") ||
     path.startsWith("/coach");
 
   // Giriş yapmamış kullanıcı korumalı sayfaya gidemez
