@@ -70,7 +70,7 @@ export default function CoachPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
         <MessageCircle className="h-6 w-6" />
         Finans Koçu
@@ -80,12 +80,13 @@ export default function CoachPage() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {SUGGESTIONS.map((s) => (
+        {SUGGESTIONS.map((s, i) => (
           <button
             key={s}
             onClick={() => ask(s)}
             disabled={loading}
-            className="rounded-full border bg-white px-3 py-1.5 text-sm text-gray-600 shadow-sm transition-colors hover:border-gray-400 hover:text-black disabled:opacity-50"
+            className="animate-fade-in-up rounded-full border bg-white px-3 py-1.5 text-sm text-gray-600 shadow-sm transition-all hover:border-indigo-300 hover:text-indigo-700 active:scale-[0.97] disabled:opacity-50"
+            style={{ animationDelay: `${i * 50}ms` }}
           >
             {s}
           </button>
@@ -103,12 +104,12 @@ export default function CoachPage() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Bir soru yaz..."
-          className="flex-1 rounded-lg border p-2 text-sm shadow-sm"
+          className="flex-1 rounded-lg border p-2 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
           Sor
@@ -116,7 +117,7 @@ export default function CoachPage() {
       </form>
 
       {(asked || loading || answer || error) && (
-        <div className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+        <div className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 shadow-sm">
           {asked && (
             <p className="mb-3 flex items-start gap-2 text-sm font-medium text-gray-700">
               <Sparkle className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
@@ -129,7 +130,14 @@ export default function CoachPage() {
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
               {answer}
               {loading && !answer && (
-                <span className="text-gray-400">Düşünüyor...</span>
+                <span className="inline-flex items-center gap-1 text-gray-400">
+                  Düşünüyor
+                  <span className="flex gap-0.5">
+                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.2s]" />
+                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.1s]" />
+                    <span className="h-1 w-1 animate-bounce rounded-full bg-gray-400" />
+                  </span>
+                </span>
               )}
               {loading && answer && (
                 <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-gray-400 align-middle" />

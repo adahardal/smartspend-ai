@@ -94,14 +94,17 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <p className="mt-2 text-gray-600">
         Hoş geldin, {user?.user_metadata?.full_name || user?.email} 👋
       </p>
 
       {highlights.length > 0 && (
-        <div className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+        <div
+          className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 shadow-sm"
+          style={{ animationDelay: "80ms" }}
+        >
           <h2 className="mb-3 font-semibold">Öne Çıkanlar</h2>
           <ul className="space-y-2">
             {highlights.map((h, i) => {
@@ -114,7 +117,11 @@ export default async function DashboardPage() {
                     ? "text-green-600"
                     : "text-gray-500";
               return (
-                <li key={i} className="flex items-start gap-2 text-sm">
+                <li
+                  key={i}
+                  className="animate-fade-in-up flex items-start gap-2 text-sm"
+                  style={{ animationDelay: `${140 + i * 60}ms` }}
+                >
                   <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
                   <span className="text-gray-700">{h.text}</span>
                 </li>
@@ -124,17 +131,20 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <DashboardCharts
-        income={income}
-        expense={expense}
-        net={net}
-        categoryTotals={categoryTotals}
-        monthlyTotals={monthlyTotals}
-      />
+      <div className="animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+        <DashboardCharts
+          income={income}
+          expense={expense}
+          net={net}
+          categoryTotals={categoryTotals}
+          monthlyTotals={monthlyTotals}
+        />
+      </div>
 
       <Link
         href="/transactions"
-        className="mt-6 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+        className="animate-fade-in-up mt-6 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
+        style={{ animationDelay: "200ms" }}
       >
         İşlemlere Git
       </Link>

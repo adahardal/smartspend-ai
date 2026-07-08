@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { Skeleton } from "@/components/skeleton";
 
 type Category = { id: number; name: string };
 
@@ -264,7 +265,7 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">İşlemler</h1>
         <div className="flex gap-2">
@@ -318,7 +319,7 @@ export default function TransactionsPage() {
           <button
             onClick={handleAddCategory}
             disabled={categorySubmitting || !newCategoryName.trim()}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             Ekle
@@ -382,7 +383,7 @@ export default function TransactionsPage() {
           <button
             onClick={handleSubmitTransaction}
             disabled={submitting || !amount}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 p-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 p-2 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
           >
             {!editingId && <Plus className="h-4 w-4" />}
             {submitting ? "Kaydediliyor..." : editingId ? "Güncelle" : "Ekle"}
@@ -464,19 +465,30 @@ export default function TransactionsPage() {
       </div>
 
       {loading && (
-        <div className="mt-4 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
-          Yükleniyor...
+        <div className="mt-4 space-y-2 overflow-hidden rounded-xl border bg-white shadow-sm">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div>
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="mt-1.5 h-3 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
         </div>
       )}
 
       {!loading && visibleTransactions.length === 0 && (
-        <div className="mt-4 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
+        <div className="animate-fade-in-up mt-4 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
           Henüz işlem yok.
         </div>
       )}
 
       {!loading && filterType !== "expense" && incomeRows.length > 0 && (
-        <div className="mt-6">
+        <div className="animate-fade-in-up mt-6">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-green-700">Gelir</h2>
             <span className="text-sm font-medium text-green-600">
@@ -490,7 +502,7 @@ export default function TransactionsPage() {
       )}
 
       {!loading && filterType !== "income" && expenseRows.length > 0 && (
-        <div className="mt-6">
+        <div className="animate-fade-in-up mt-6" style={{ animationDelay: "60ms" }}>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-red-700">Gider</h2>
             <span className="text-sm font-medium text-red-600">

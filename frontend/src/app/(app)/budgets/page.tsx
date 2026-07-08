@@ -3,6 +3,7 @@
 import { Check, Pencil, Plus, Target, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { Skeleton } from "@/components/skeleton";
 
 type Category = { id: number; name: string };
 
@@ -111,7 +112,7 @@ export default function BudgetsPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
         <Target className="h-6 w-6" />
         Bütçeler
@@ -146,7 +147,7 @@ export default function BudgetsPage() {
           <button
             onClick={handleSave}
             disabled={submitting || !categoryId || !amount}
-            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             Kaydet
@@ -163,16 +164,28 @@ export default function BudgetsPage() {
 
       <div className="mt-6 space-y-3">
         {loading && (
-          <div className="rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
-            Yükleniyor...
-          </div>
+          <>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-4" />
+                </div>
+                <Skeleton className="mt-3 h-2 w-full" />
+                <div className="mt-2 flex justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            ))}
+          </>
         )}
         {!loading && budgets.length === 0 && (
-          <div className="rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
+          <div className="animate-fade-in-up rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
             Henüz bütçe yok. Yukarıdan bir kategori için limit belirle.
           </div>
         )}
-        {budgets.map((b) => {
+        {budgets.map((b, i) => {
           const ratio = b.amount > 0 ? b.spent / b.amount : 0;
           const pct = Math.min(ratio * 100, 100);
           const over = b.remaining < 0;
@@ -184,7 +197,8 @@ export default function BudgetsPage() {
           return (
             <div
               key={b.id}
-              className="rounded-xl border bg-white p-4 shadow-sm"
+              className="animate-fade-in-up rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+              style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium">{b.category_name}</span>
@@ -234,7 +248,7 @@ export default function BudgetsPage() {
 
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
                 <div
-                  className={`h-full rounded-full ${barColor}`}
+                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${barColor}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>

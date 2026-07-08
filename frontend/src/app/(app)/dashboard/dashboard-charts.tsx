@@ -67,7 +67,7 @@ export function DashboardCharts({
   return (
     <div className="mt-6 space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="rounded-xl border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <TrendingUp className="h-4 w-4" />
             Bu Ay Gelir
@@ -76,7 +76,7 @@ export function DashboardCharts({
             {currencyFormatter.format(income)}
           </p>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="rounded-xl border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <TrendingDown className="h-4 w-4" />
             Bu Ay Gider
@@ -85,7 +85,7 @@ export function DashboardCharts({
             {currencyFormatter.format(expense)}
           </p>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="rounded-xl border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Scale className="h-4 w-4" />
             Net

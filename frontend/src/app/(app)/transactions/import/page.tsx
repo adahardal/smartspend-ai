@@ -180,7 +180,7 @@ export default function ImportTransactionsPage() {
         <button
           onClick={handlePreview}
           disabled={!file || loadingPreview}
-          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
         >
           {loadingPreview ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -211,7 +211,7 @@ export default function ImportTransactionsPage() {
             <button
               onClick={handleConfirm}
               disabled={submitting || includedCount === 0}
-              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
             >
               {submitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />

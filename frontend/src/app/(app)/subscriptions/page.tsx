@@ -3,6 +3,7 @@
 import { Repeat } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { Skeleton } from "@/components/skeleton";
 
 type Subscription = {
   description: string;
@@ -43,7 +44,7 @@ export default function SubscriptionsPage() {
   const total = (subscriptions ?? []).reduce((sum, s) => sum + s.amount, 0);
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="flex items-center gap-2 text-2xl font-bold">
         <Repeat className="h-6 w-6" />
         Abonelikler
@@ -56,13 +57,25 @@ export default function SubscriptionsPage() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       {subscriptions === null && !error && (
-        <div className="mt-6 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
-          Yükleniyor...
+        <div className="mt-6 space-y-3">
+          <div className="rounded-xl border bg-white p-4 shadow-sm">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="mt-2 h-7 w-40" />
+          </div>
+          {[0, 1].map((i) => (
+            <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="mt-3 h-3 w-32" />
+            </div>
+          ))}
         </div>
       )}
 
       {subscriptions !== null && subscriptions.length === 0 && (
-        <div className="mt-6 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
+        <div className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 text-sm text-gray-500 shadow-sm">
           Henüz tekrarlayan bir ödeme tespit edilmedi. En az iki ay üst üste
           aynı tutarda gelen işlemler burada listelenir.
         </div>
@@ -70,7 +83,7 @@ export default function SubscriptionsPage() {
 
       {subscriptions !== null && subscriptions.length > 0 && (
         <>
-          <div className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">Tahmini aylık toplam</p>
             <p className="text-2xl font-bold">
               {currencyFormatter.format(total)}
@@ -78,10 +91,11 @@ export default function SubscriptionsPage() {
           </div>
 
           <div className="mt-4 space-y-3">
-            {subscriptions.map((s) => (
+            {subscriptions.map((s, i) => (
               <div
                 key={s.description}
-                className="rounded-xl border bg-white p-4 shadow-sm"
+                className="animate-fade-in-up rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                style={{ animationDelay: `${80 + i * 50}ms` }}
               >
                 <div className="flex items-center justify-between">
                   <div>
