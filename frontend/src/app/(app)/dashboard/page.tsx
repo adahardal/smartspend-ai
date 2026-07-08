@@ -1,3 +1,4 @@
+import { Info, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "./dashboard-charts";
@@ -14,6 +15,11 @@ type MonthlyTotal = {
   month: string;
   income: number;
   expense: number;
+};
+
+type Highlight = {
+  kind: "up" | "down" | "info";
+  text: string;
 };
 
 function firstDayOfMonthISO() {
@@ -45,9 +51,10 @@ export default async function DashboardPage() {
   let net = 0;
   let categoryTotals: CategoryTotal[] = [];
   let monthlyTotals: MonthlyTotal[] = [];
+  let highlights: Highlight[] = [];
 
   try {
-    const [summaryRes, byCategoryRes, monthlyRes] = await Promise.all([
+    const [summaryRes, byCategoryRes, monthlyRes, highlightsRes] = await Promise.all([
       fetch(`${API_URL}/api/v1/summary?date_from=${dateFrom}`, {
         headers: authHeaders,
         cache: "no-store",
@@ -57,6 +64,10 @@ export default async function DashboardPage() {
         cache: "no-store",
       }),
       fetch(`${API_URL}/api/v1/summary/monthly?months=6`, {
+        headers: authHeaders,
+        cache: "no-store",
+      }),
+      fetch(`${API_URL}/api/v1/insights/highlights`, {
         headers: authHeaders,
         cache: "no-store",
       }),
@@ -75,6 +86,9 @@ export default async function DashboardPage() {
       const raw: MonthlyTotal[] = await monthlyRes.json();
       monthlyTotals = raw.map((m) => ({ ...m, month: formatMonthLabel(m.month) }));
     }
+    if (highlightsRes.ok) {
+      highlights = await highlightsRes.json();
+    }
   } catch {
     // backend kapalıysa kartlar 0 görünür
   }
@@ -85,6 +99,30 @@ export default async function DashboardPage() {
       <p className="mt-2 text-gray-600">
         Hoş geldin, {user?.user_metadata?.full_name || user?.email} 👋
       </p>
+
+      {highlights.length > 0 && (
+        <div className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <h2 className="mb-3 font-semibold">Öne Çıkanlar</h2>
+          <ul className="space-y-2">
+            {highlights.map((h, i) => {
+              const Icon =
+                h.kind === "up" ? TrendingUp : h.kind === "down" ? TrendingDown : Info;
+              const color =
+                h.kind === "up"
+                  ? "text-red-600"
+                  : h.kind === "down"
+                    ? "text-green-600"
+                    : "text-gray-500";
+              return (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                  <span className="text-gray-700">{h.text}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <DashboardCharts
         income={income}

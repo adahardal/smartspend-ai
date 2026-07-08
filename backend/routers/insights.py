@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import models
@@ -16,6 +16,10 @@ MIN_OCCURRENCES = 2
 GAP_MIN_DAYS = 24
 GAP_MAX_DAYS = 40
 AMOUNT_TOLERANCE = 0.15
+
+MIN_CATEGORY_AMOUNT = 50.0
+SIGNIFICANT_CHANGE_PCT = 20.0
+MAX_HIGHLIGHTS = 5
 
 
 class SubscriptionOut(BaseModel):
@@ -107,3 +111,125 @@ def detect_subscriptions(
 
     results.sort(key=lambda r: r.amount, reverse=True)
     return results
+
+
+class Highlight(BaseModel):
+    kind: str  # "up" | "down" | "info"
+    text: str
+
+
+def _month_range(offset: int) -> tuple[date, date]:
+    today = date.today()
+    year, month = today.year, today.month + offset
+    while month < 1:
+        month += 12
+        year -= 1
+    while month > 12:
+        month -= 12
+        year += 1
+    start = date(year, month, 1)
+    end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    return start, end
+
+
+def _category_totals(
+    db: Session, user_id: str, start: date, end: date
+) -> dict[str, float]:
+    rows = db.execute(
+        select(
+            func.coalesce(models.Category.name, "Kategorisiz"),
+            func.sum(models.Transaction.amount),
+        )
+        .select_from(models.Transaction)
+        .join(
+            models.Category,
+            models.Transaction.category_id == models.Category.id,
+            isouter=True,
+        )
+        .where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.type == "expense",
+            models.Transaction.date >= start,
+            models.Transaction.date < end,
+        )
+        .group_by(models.Category.name)
+    )
+    return {name: float(total) for name, total in rows}
+
+
+def _total_expense(db: Session, user_id: str, start: date, end: date) -> float:
+    total = db.scalar(
+        select(func.coalesce(func.sum(models.Transaction.amount), 0)).where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.type == "expense",
+            models.Transaction.date >= start,
+            models.Transaction.date < end,
+        )
+    )
+    return float(total)
+
+
+@router.get("/highlights", response_model=list[Highlight])
+def get_highlights(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    this_start, this_end = _month_range(0)
+    last_start, last_end = _month_range(-1)
+
+    this_cats = _category_totals(db, user_id, this_start, this_end)
+    last_cats = _category_totals(db, user_id, last_start, last_end)
+    this_total = _total_expense(db, user_id, this_start, this_end)
+    last_total = _total_expense(db, user_id, last_start, last_end)
+
+    highlights: list[Highlight] = []
+
+    if last_total > 0:
+        change_pct = (this_total - last_total) / last_total * 100
+        if abs(change_pct) >= SIGNIFICANT_CHANGE_PCT:
+            direction = "arttı" if change_pct > 0 else "azaldı"
+            highlights.append(
+                Highlight(
+                    kind="up" if change_pct > 0 else "down",
+                    text=(
+                        f"Bu ay toplam harcaman geçen aya göre %{abs(change_pct):.0f} "
+                        f"{direction} ({this_total:.0f} TL / {last_total:.0f} TL)."
+                    ),
+                )
+            )
+
+    category_changes: list[tuple[float, str, float, float, float | None]] = []
+    for name in set(this_cats) | set(last_cats):
+        cur = this_cats.get(name, 0.0)
+        prev = last_cats.get(name, 0.0)
+        if max(cur, prev) < MIN_CATEGORY_AMOUNT:
+            continue
+        if prev == 0:
+            category_changes.append((cur, name, cur, prev, None))
+            continue
+        pct = (cur - prev) / prev * 100
+        if abs(pct) >= SIGNIFICANT_CHANGE_PCT:
+            category_changes.append((abs(cur - prev), name, cur, prev, pct))
+
+    category_changes.sort(key=lambda c: c[0], reverse=True)
+    for _, name, cur, prev, pct in category_changes:
+        if pct is None:
+            highlights.append(
+                Highlight(
+                    kind="info",
+                    text=f"{name} kategorisinde bu ay ilk kez harcama yaptın: {cur:.0f} TL.",
+                )
+            )
+        else:
+            direction = "arttı" if pct > 0 else "azaldı"
+            highlights.append(
+                Highlight(
+                    kind="up" if pct > 0 else "down",
+                    text=(
+                        f"{name} harcaman geçen aya göre %{abs(pct):.0f} {direction} "
+                        f"({cur:.0f} TL / {prev:.0f} TL)."
+                    ),
+                )
+            )
+
+    return highlights[:MAX_HIGHLIGHTS]
