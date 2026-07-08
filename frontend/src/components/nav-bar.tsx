@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   Receipt,
+  Repeat,
   Target,
   Wallet,
 } from "lucide-react";
@@ -15,6 +16,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "İşlemler", icon: Receipt },
   { href: "/budgets", label: "Bütçeler", icon: Target },
+  { href: "/subscriptions", label: "Abonelikler", icon: Repeat },
   { href: "/coach", label: "Koç", icon: MessageCircle },
 ];
 

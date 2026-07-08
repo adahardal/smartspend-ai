@@ -14,6 +14,7 @@ from routers import (  # noqa: E402
     categories,
     coach,
     imports,
+    insights,
     summary,
     transactions,
 )
@@ -38,6 +39,7 @@ app.include_router(imports.router)
 app.include_router(ai.router)
 app.include_router(budgets.router)
 app.include_router(coach.router)
+app.include_router(insights.router)
 
 
 @app.get("/healthz")
