@@ -1,8 +1,8 @@
 from collections import defaultdict
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -233,3 +233,119 @@ def get_highlights(
             )
 
     return highlights[:MAX_HIGHLIGHTS]
+
+
+class ManualSubscriptionIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    amount: float = Field(gt=0)
+    category_id: int | None = None
+    next_billing_date: date | None = None
+
+
+class ManualSubscriptionOut(BaseModel):
+    id: int
+    name: str
+    amount: float
+    category_name: str | None
+    next_billing_date: date | None
+
+
+def _to_manual_out(
+    sub: models.ManualSubscription, category_names: dict[int, str]
+) -> ManualSubscriptionOut:
+    return ManualSubscriptionOut(
+        id=sub.id,
+        name=sub.name,
+        amount=float(sub.amount),
+        category_name=category_names.get(sub.category_id) if sub.category_id else None,
+        next_billing_date=sub.next_billing_date,
+    )
+
+
+def _category_names(db: Session, user_id: str) -> dict[int, str]:
+    return {
+        c.id: c.name
+        for c in db.scalars(
+            select(models.Category).where(models.Category.user_id == user_id)
+        )
+    }
+
+
+def _get_owned_category(db: Session, user_id: str, category_id: int) -> models.Category:
+    category = db.get(models.Category, category_id)
+    if category is None or category.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Kategori bulunamadı")
+    return category
+
+
+@router.get("/subscriptions/manual", response_model=list[ManualSubscriptionOut])
+def list_manual_subscriptions(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    subs = list(
+        db.scalars(
+            select(models.ManualSubscription)
+            .where(models.ManualSubscription.user_id == user_id)
+            .order_by(models.ManualSubscription.id)
+        ).all()
+    )
+    names = _category_names(db, user_id)
+    return [_to_manual_out(s, names) for s in subs]
+
+
+@router.post("/subscriptions/manual", response_model=ManualSubscriptionOut, status_code=201)
+def create_manual_subscription(
+    payload: ManualSubscriptionIn,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    if payload.category_id is not None:
+        _get_owned_category(db, user_id, payload.category_id)
+
+    sub = models.ManualSubscription(
+        user_id=user_id,
+        name=payload.name,
+        amount=payload.amount,
+        category_id=payload.category_id,
+        next_billing_date=payload.next_billing_date,
+    )
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+    return _to_manual_out(sub, _category_names(db, user_id))
+
+
+@router.put("/subscriptions/manual/{sub_id}", response_model=ManualSubscriptionOut)
+def update_manual_subscription(
+    sub_id: int,
+    payload: ManualSubscriptionIn,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    sub = db.get(models.ManualSubscription, sub_id)
+    if sub is None or sub.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Abonelik bulunamadı")
+    if payload.category_id is not None:
+        _get_owned_category(db, user_id, payload.category_id)
+
+    sub.name = payload.name
+    sub.amount = payload.amount
+    sub.category_id = payload.category_id
+    sub.next_billing_date = payload.next_billing_date
+    db.commit()
+    db.refresh(sub)
+    return _to_manual_out(sub, _category_names(db, user_id))
+
+
+@router.delete("/subscriptions/manual/{sub_id}", status_code=204)
+def delete_manual_subscription(
+    sub_id: int,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    sub = db.get(models.ManualSubscription, sub_id)
+    if sub is None or sub.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Abonelik bulunamadı")
+    db.delete(sub)
+    db.commit()
