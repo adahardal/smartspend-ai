@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Receipt,
   Repeat,
+  Settings,
   Target,
   Wallet,
 } from "lucide-react";
@@ -57,6 +58,17 @@ export function NavBar({ userEmail }: { userEmail: string | null }) {
           {userEmail && (
             <span className="hidden text-sm text-gray-500 md:inline">{userEmail}</span>
           )}
+          <Link
+            href="/settings"
+            aria-label="Profil ve Ayarlar"
+            className={`rounded-lg p-1.5 transition-colors ${
+              pathname.startsWith("/settings")
+                ? "bg-indigo-600 text-white"
+                : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
           <LogoutButton />
         </div>
       </div>

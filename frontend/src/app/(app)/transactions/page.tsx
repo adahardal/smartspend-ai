@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { DateField } from "@/components/date-field";
 import { Skeleton } from "@/components/skeleton";
 
 type Category = { id: number; name: string };
@@ -80,6 +81,9 @@ export default function TransactionsPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categorySubmitting, setCategorySubmitting] = useState(false);
 
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const loadCategories = useCallback(async () => {
     const res = await apiFetch("/api/v1/categories");
     if (res.ok) {
@@ -100,6 +104,7 @@ export default function TransactionsPage() {
     } else {
       setMessage("İşlemler yüklenemedi");
     }
+    setSelectedIds(new Set());
     setLoading(false);
   }, [filterType, filterCategoryId, filterDateFrom, filterDateTo]);
 
@@ -170,6 +175,45 @@ export default function TransactionsPage() {
     }
   }
 
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(rows: Transaction[]) {
+    const allSelected = rows.every((t) => selectedIds.has(t.id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const t of rows) {
+        if (allSelected) next.delete(t.id);
+        else next.add(t.id);
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`${selectedIds.size} işlemi silmek istediğine emin misin?`)) return;
+
+    setBulkDeleting(true);
+    const results = await Promise.all(
+      [...selectedIds].map((id) =>
+        apiFetch(`/api/v1/transactions/${id}`, { method: "DELETE" })
+      )
+    );
+    if (results.some((r) => !r.ok)) {
+      setMessage("Bazı işlemler silinemedi");
+    }
+    if (editingId !== null && selectedIds.has(editingId)) resetForm();
+    await loadTransactions();
+    setBulkDeleting(false);
+  }
+
   async function handleAddCategory() {
     setCategorySubmitting(true);
     setMessage("");
@@ -232,6 +276,13 @@ export default function TransactionsPage() {
     return (
       <li key={t.id} className="flex items-center justify-between p-3 text-sm">
         <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selectedIds.has(t.id)}
+            onChange={() => toggleSelected(t.id)}
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/40"
+            aria-label="İşlemi seç"
+          />
           <CategoryIcon name={categoryName(t.category_id)} className="h-4 w-4 text-gray-400" />
           <div>
             <span className={t.type === "income" ? "text-green-600" : "text-red-600"}>
@@ -372,12 +423,7 @@ export default function TransactionsPage() {
           className="w-full rounded-lg border p-2 text-sm"
         />
 
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded-lg border p-2 text-sm"
-        />
+        <DateField value={date} onChange={setDate} className="w-full" />
 
         <div className="flex gap-2">
           <button
@@ -425,19 +471,17 @@ export default function TransactionsPage() {
           ))}
         </select>
 
-        <input
-          type="date"
+        <DateField
           value={filterDateFrom}
-          onChange={(e) => setFilterDateFrom(e.target.value)}
-          className="rounded-lg border bg-white p-2 text-sm"
-          aria-label="Başlangıç tarihi"
+          onChange={setFilterDateFrom}
+          placeholder="Başlangıç tarihi"
+          className="bg-white"
         />
-        <input
-          type="date"
+        <DateField
           value={filterDateTo}
-          onChange={(e) => setFilterDateTo(e.target.value)}
-          className="rounded-lg border bg-white p-2 text-sm"
-          aria-label="Bitiş tarihi"
+          onChange={setFilterDateTo}
+          placeholder="Bitiş tarihi"
+          className="bg-white"
         />
 
         <div className="relative flex-1">
@@ -463,6 +507,30 @@ export default function TransactionsPage() {
           Net: {currencyFormatter.format(totals.net)}
         </span>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="animate-fade-in-up mt-3 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm">
+          <span className="font-medium text-indigo-700">
+            {selectedIds.size} işlem seçili
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-indigo-600 hover:text-indigo-800"
+            >
+              Seçimi kaldır
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {bulkDeleting ? "Siliniyor..." : "Seçilenleri Sil"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && (
         <div className="mt-4 space-y-2 overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -490,7 +558,15 @@ export default function TransactionsPage() {
       {!loading && filterType !== "expense" && incomeRows.length > 0 && (
         <div className="animate-fade-in-up mt-6">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-green-700">Gelir</h2>
+            <label className="flex items-center gap-2 text-sm font-semibold text-green-700">
+              <input
+                type="checkbox"
+                checked={incomeRows.length > 0 && incomeRows.every((t) => selectedIds.has(t.id))}
+                onChange={() => toggleSelectAll(incomeRows)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/40"
+              />
+              Gelir
+            </label>
             <span className="text-sm font-medium text-green-600">
               {currencyFormatter.format(totals.income)}
             </span>
@@ -504,7 +580,15 @@ export default function TransactionsPage() {
       {!loading && filterType !== "income" && expenseRows.length > 0 && (
         <div className="animate-fade-in-up mt-6" style={{ animationDelay: "60ms" }}>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-red-700">Gider</h2>
+            <label className="flex items-center gap-2 text-sm font-semibold text-red-700">
+              <input
+                type="checkbox"
+                checked={expenseRows.length > 0 && expenseRows.every((t) => selectedIds.has(t.id))}
+                onChange={() => toggleSelectAll(expenseRows)}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/40"
+              />
+              Gider
+            </label>
             <span className="text-sm font-medium text-red-600">
               {currencyFormatter.format(totals.expense)}
             </span>

@@ -1,3 +1,4 @@
+import calendar
 from collections import defaultdict
 from datetime import date, timedelta
 
@@ -349,3 +350,59 @@ def delete_manual_subscription(
         raise HTTPException(status_code=404, detail="Abonelik bulunamadı")
     db.delete(sub)
     db.commit()
+
+
+class PayPeriodBalance(BaseModel):
+    configured: bool
+    period_start: date | None = None
+    income: float = 0.0
+    expense: float = 0.0
+    balance: float = 0.0
+
+
+def _period_start(today: date, start_day: int) -> date:
+    """Most recent occurrence of start_day (clamped to each month's length) on or before today."""
+    last_day_this_month = calendar.monthrange(today.year, today.month)[1]
+    candidate = date(today.year, today.month, min(start_day, last_day_this_month))
+    if candidate <= today:
+        return candidate
+
+    year, month = today.year, today.month - 1
+    if month == 0:
+        year, month = year - 1, 12
+    last_day_prev_month = calendar.monthrange(year, month)[1]
+    return date(year, month, min(start_day, last_day_prev_month))
+
+
+@router.get("/pay-period-balance", response_model=PayPeriodBalance)
+def get_pay_period_balance(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    settings = db.get(models.UserSettings, user_id)
+    if settings is None or settings.period_start_day is None:
+        return PayPeriodBalance(configured=False)
+
+    today = date.today()
+    period_start = _period_start(today, settings.period_start_day)
+
+    rows = db.execute(
+        select(models.Transaction.type, func.sum(models.Transaction.amount))
+        .where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.date >= period_start,
+            models.Transaction.date <= today,
+        )
+        .group_by(models.Transaction.type)
+    )
+    totals = {"income": 0.0, "expense": 0.0}
+    for t_type, total in rows:
+        totals[t_type] = float(total)
+
+    return PayPeriodBalance(
+        configured=True,
+        period_start=period_start,
+        income=totals["income"],
+        expense=totals["expense"],
+        balance=totals["income"] - totals["expense"],
+    )

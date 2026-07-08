@@ -3,6 +3,7 @@
 import { Check, Pencil, Plus, Repeat, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { DateField } from "@/components/date-field";
 import { Skeleton } from "@/components/skeleton";
 
 type Subscription = {
@@ -256,11 +257,10 @@ export default function SubscriptionsPage() {
                     </option>
                   ))}
                 </select>
-                <input
-                  type="date"
+                <DateField
                   value={nextBillingDate}
-                  onChange={(e) => setNextBillingDate(e.target.value)}
-                  className="rounded-lg border p-2 text-sm"
+                  onChange={setNextBillingDate}
+                  placeholder="Sıradaki fatura (opsiyonel)"
                 />
                 <button
                   onClick={handleAdd}

@@ -1,4 +1,4 @@
-import { Info, TrendingDown, TrendingUp } from "lucide-react";
+import { Info, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "./dashboard-charts";
@@ -21,6 +21,24 @@ type Highlight = {
   kind: "up" | "down" | "info";
   text: string;
 };
+
+type PayPeriodBalance = {
+  configured: boolean;
+  period_start: string | null;
+  income: number;
+  expense: number;
+  balance: number;
+};
+
+const periodDateFormatter = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "long",
+});
+
+const currencyFormatter = new Intl.NumberFormat("tr-TR", {
+  style: "currency",
+  currency: "TRY",
+});
 
 function firstDayOfMonthISO() {
   const now = new Date();
@@ -52,26 +70,32 @@ export default async function DashboardPage() {
   let categoryTotals: CategoryTotal[] = [];
   let monthlyTotals: MonthlyTotal[] = [];
   let highlights: Highlight[] = [];
+  let payPeriod: PayPeriodBalance | null = null;
 
   try {
-    const [summaryRes, byCategoryRes, monthlyRes, highlightsRes] = await Promise.all([
-      fetch(`${API_URL}/api/v1/summary?date_from=${dateFrom}`, {
-        headers: authHeaders,
-        cache: "no-store",
-      }),
-      fetch(`${API_URL}/api/v1/summary/by-category?type=expense&date_from=${dateFrom}`, {
-        headers: authHeaders,
-        cache: "no-store",
-      }),
-      fetch(`${API_URL}/api/v1/summary/monthly?months=6`, {
-        headers: authHeaders,
-        cache: "no-store",
-      }),
-      fetch(`${API_URL}/api/v1/insights/highlights`, {
-        headers: authHeaders,
-        cache: "no-store",
-      }),
-    ]);
+    const [summaryRes, byCategoryRes, monthlyRes, highlightsRes, payPeriodRes] =
+      await Promise.all([
+        fetch(`${API_URL}/api/v1/summary?date_from=${dateFrom}`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/v1/summary/by-category?type=expense&date_from=${dateFrom}`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/v1/summary/monthly?months=6`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/v1/insights/highlights`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+        fetch(`${API_URL}/api/v1/insights/pay-period-balance`, {
+          headers: authHeaders,
+          cache: "no-store",
+        }),
+      ]);
 
     if (summaryRes.ok) {
       const summary = await summaryRes.json();
@@ -89,6 +113,9 @@ export default async function DashboardPage() {
     if (highlightsRes.ok) {
       highlights = await highlightsRes.json();
     }
+    if (payPeriodRes.ok) {
+      payPeriod = await payPeriodRes.json();
+    }
   } catch {
     // backend kapalıysa kartlar 0 görünür
   }
@@ -99,6 +126,28 @@ export default async function DashboardPage() {
       <p className="mt-2 text-gray-600">
         Hoş geldin, {user?.user_metadata?.full_name || user?.email} 👋
       </p>
+
+      {payPeriod?.configured && (
+        <div className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Wallet className="h-4 w-4" />
+            Cebindeki Paran
+          </div>
+          <p
+            className={`mt-1 text-2xl font-bold ${
+              payPeriod.balance < 0 ? "text-red-600" : "text-gray-900"
+            }`}
+          >
+            {currencyFormatter.format(payPeriod.balance)}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {payPeriod.period_start &&
+              periodDateFormatter.format(new Date(`${payPeriod.period_start}T00:00:00`))}{" "}
+            – bugün · {currencyFormatter.format(payPeriod.income)} gelir,{" "}
+            {currencyFormatter.format(payPeriod.expense)} gider
+          </p>
+        </div>
+      )}
 
       {highlights.length > 0 && (
         <div
