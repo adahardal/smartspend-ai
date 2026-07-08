@@ -138,7 +138,7 @@ export default function ReportPage() {
                       </div>
                       <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-100">
                         <div
-                          className="h-full rounded-full bg-black"
+                          className="h-full rounded-full bg-indigo-600"
                           style={{ width: `${pct}%` }}
                         />
                       </div>

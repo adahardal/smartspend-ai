@@ -134,7 +134,7 @@ export default async function DashboardPage() {
 
       <Link
         href="/transactions"
-        className="mt-6 inline-block rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+        className="mt-6 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
       >
         İşlemlere Git
       </Link>

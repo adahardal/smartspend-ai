@@ -108,7 +108,7 @@ export default function CoachPage() {
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className="flex items-center gap-1 rounded-lg bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
         >
           <Send className="h-4 w-4" />
           Sor

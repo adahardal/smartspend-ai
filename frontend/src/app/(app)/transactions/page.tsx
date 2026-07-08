@@ -318,7 +318,7 @@ export default function TransactionsPage() {
           <button
             onClick={handleAddCategory}
             disabled={categorySubmitting || !newCategoryName.trim()}
-            className="flex items-center gap-1 rounded-lg bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             Ekle
@@ -382,7 +382,7 @@ export default function TransactionsPage() {
           <button
             onClick={handleSubmitTransaction}
             disabled={submitting || !amount}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-black p-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 p-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
             {!editingId && <Plus className="h-4 w-4" />}
             {submitting ? "Kaydediliyor..." : editingId ? "Güncelle" : "Ekle"}

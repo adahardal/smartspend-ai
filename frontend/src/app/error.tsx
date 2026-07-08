@@ -21,7 +21,7 @@ export default function ErrorPage({
       </p>
       <button
         onClick={unstable_retry}
-        className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
       >
         Tekrar Dene
       </button>

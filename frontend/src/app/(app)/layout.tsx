@@ -14,7 +14,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar userEmail={user?.email ?? null} />
-      <div className="mx-auto max-w-3xl px-6 py-8">{children}</div>
+      <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
     </div>
   );
 }
