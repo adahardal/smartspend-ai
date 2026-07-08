@@ -20,7 +20,7 @@ AMOUNT_TOLERANCE = 0.15
 
 MIN_CATEGORY_AMOUNT = 50.0
 SIGNIFICANT_CHANGE_PCT = 20.0
-MAX_HIGHLIGHTS = 5
+MAX_HIGHLIGHTS = 8
 
 
 class SubscriptionOut(BaseModel):
@@ -115,8 +115,11 @@ def detect_subscriptions(
 
 
 class Highlight(BaseModel):
-    kind: str  # "up" | "down" | "info"
+    kind: str  # "up" | "down" | "info" | "warning"
     text: str
+
+
+BUDGET_WARNING_PCT = 80.0
 
 
 def _month_range(offset: int) -> tuple[date, date]:
@@ -170,6 +173,57 @@ def _total_expense(db: Session, user_id: str, start: date, end: date) -> float:
     return float(total)
 
 
+def _budget_warnings(db: Session, user_id: str, month_start: date) -> list[Highlight]:
+    budgets = list(
+        db.scalars(
+            select(models.Budget).where(models.Budget.user_id == user_id)
+        ).all()
+    )
+    if not budgets:
+        return []
+
+    spent_rows = db.execute(
+        select(models.Transaction.category_id, func.sum(models.Transaction.amount))
+        .where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.type == "expense",
+            models.Transaction.date >= month_start,
+        )
+        .group_by(models.Transaction.category_id)
+    )
+    spent_by_category = {cid: float(total) for cid, total in spent_rows}
+    names = {
+        c.id: c.name
+        for c in db.scalars(
+            select(models.Category).where(models.Category.user_id == user_id)
+        )
+    }
+
+    warnings: list[tuple[float, Highlight]] = []
+    for b in budgets:
+        amount = float(b.amount)
+        if amount <= 0:
+            continue
+        spent = spent_by_category.get(b.category_id, 0.0)
+        pct = spent / amount * 100
+        if pct < BUDGET_WARNING_PCT:
+            continue
+        name = names.get(b.category_id, "—")
+        if spent > amount:
+            text = (
+                f"{name} bütçen aşıldı: {spent:.0f} TL / {amount:.0f} TL limit."
+            )
+        else:
+            text = (
+                f"{name} bütçende limitin %{pct:.0f}'ine ulaştın "
+                f"({spent:.0f} TL / {amount:.0f} TL)."
+            )
+        warnings.append((pct, Highlight(kind="warning", text=text)))
+
+    warnings.sort(key=lambda w: w[0], reverse=True)
+    return [h for _, h in warnings]
+
+
 @router.get("/highlights", response_model=list[Highlight])
 def get_highlights(
     db: Session = Depends(get_db),
@@ -183,7 +237,7 @@ def get_highlights(
     this_total = _total_expense(db, user_id, this_start, this_end)
     last_total = _total_expense(db, user_id, last_start, last_end)
 
-    highlights: list[Highlight] = []
+    highlights: list[Highlight] = _budget_warnings(db, user_id, this_start)
 
     if last_total > 0:
         change_pct = (this_total - last_total) / last_total * 100
@@ -353,11 +407,11 @@ def delete_manual_subscription(
 
 
 class PayPeriodBalance(BaseModel):
-    configured: bool
-    period_start: date | None = None
-    income: float = 0.0
-    expense: float = 0.0
     balance: float = 0.0
+    period_configured: bool = False
+    period_start: date | None = None
+    period_income: float = 0.0
+    period_expense: float = 0.0
 
 
 def _period_start(today: date, start_day: int) -> date:
@@ -374,35 +428,47 @@ def _period_start(today: date, start_day: int) -> date:
     return date(year, month, min(start_day, last_day_prev_month))
 
 
+def _totals_since(
+    db: Session, user_id: str, start: date | None, end: date
+) -> dict[str, float]:
+    query = select(models.Transaction.type, func.sum(models.Transaction.amount)).where(
+        models.Transaction.user_id == user_id,
+        models.Transaction.date <= end,
+    )
+    if start is not None:
+        query = query.where(models.Transaction.date >= start)
+    query = query.group_by(models.Transaction.type)
+
+    totals = {"income": 0.0, "expense": 0.0}
+    for t_type, total in db.execute(query):
+        totals[t_type] = float(total)
+    return totals
+
+
 @router.get("/pay-period-balance", response_model=PayPeriodBalance)
 def get_pay_period_balance(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
+    today = date.today()
+
+    # "Cebindeki Paran" is a true running balance — every income/expense ever
+    # recorded, never reset by period. A prior period's leftover simply
+    # carries forward, exactly like a real account balance.
+    all_time = _totals_since(db, user_id, None, today)
+    balance = all_time["income"] - all_time["expense"]
+
     settings = db.get(models.UserSettings, user_id)
     if settings is None or settings.period_start_day is None:
-        return PayPeriodBalance(configured=False)
+        return PayPeriodBalance(balance=balance, period_configured=False)
 
-    today = date.today()
     period_start = _period_start(today, settings.period_start_day)
-
-    rows = db.execute(
-        select(models.Transaction.type, func.sum(models.Transaction.amount))
-        .where(
-            models.Transaction.user_id == user_id,
-            models.Transaction.date >= period_start,
-            models.Transaction.date <= today,
-        )
-        .group_by(models.Transaction.type)
-    )
-    totals = {"income": 0.0, "expense": 0.0}
-    for t_type, total in rows:
-        totals[t_type] = float(total)
+    period_totals = _totals_since(db, user_id, period_start, today)
 
     return PayPeriodBalance(
-        configured=True,
+        balance=balance,
+        period_configured=True,
         period_start=period_start,
-        income=totals["income"],
-        expense=totals["expense"],
-        balance=totals["income"] - totals["expense"],
+        period_income=period_totals["income"],
+        period_expense=period_totals["expense"],
     )

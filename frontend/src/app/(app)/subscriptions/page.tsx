@@ -53,6 +53,9 @@ export default function SubscriptionsPage() {
   const [editName, setEditName] = useState("");
   const [editAmount, setEditAmount] = useState("");
 
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const loadManual = useCallback(async () => {
     const res = await apiFetch("/api/v1/insights/subscriptions/manual");
     if (res.ok) setManual(await res.json());
@@ -111,6 +114,31 @@ export default function SubscriptionsPage() {
     });
     if (res.ok) await loadManual();
     else setError("Abonelik silinemedi");
+  }
+
+  function toggleSelected(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`${selectedIds.size} aboneliği silmek istediğine emin misin?`)) return;
+
+    setBulkDeleting(true);
+    const results = await Promise.all(
+      [...selectedIds].map((id) =>
+        apiFetch(`/api/v1/insights/subscriptions/manual/${id}`, { method: "DELETE" })
+      )
+    );
+    if (results.some((r) => !r.ok)) setError("Bazı abonelikler silinemedi");
+    setSelectedIds(new Set());
+    await loadManual();
+    setBulkDeleting(false);
   }
 
   function startEdit(s: ManualSubscription) {
@@ -273,6 +301,30 @@ export default function SubscriptionsPage() {
               </div>
             </div>
 
+            {selectedIds.size > 0 && (
+              <div className="animate-fade-in-up mt-3 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm">
+                <span className="font-medium text-indigo-700">
+                  {selectedIds.size} abonelik seçili
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-indigo-600 hover:text-indigo-800"
+                  >
+                    Seçimi kaldır
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={bulkDeleting}
+                    className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {bulkDeleting ? "Siliniyor..." : "Seçilenleri Sil"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {manual.length > 0 && (
               <div className="mt-3 space-y-3">
                 {manual.map((s) => (
@@ -295,10 +347,17 @@ export default function SubscriptionsPage() {
                           />
                         </div>
                       ) : (
-                        <div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(s.id)}
+                            onChange={() => toggleSelected(s.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500/40"
+                            aria-label="Aboneliği seç"
+                          />
                           <span className="font-medium">{s.name}</span>
                           {s.category_name && (
-                            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                               {s.category_name}
                             </span>
                           )}

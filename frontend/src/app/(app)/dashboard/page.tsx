@@ -1,4 +1,4 @@
-import { Info, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { AlertTriangle, Info, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardCharts } from "./dashboard-charts";
@@ -18,16 +18,16 @@ type MonthlyTotal = {
 };
 
 type Highlight = {
-  kind: "up" | "down" | "info";
+  kind: "up" | "down" | "info" | "warning";
   text: string;
 };
 
 type PayPeriodBalance = {
-  configured: boolean;
-  period_start: string | null;
-  income: number;
-  expense: number;
   balance: number;
+  period_configured: boolean;
+  period_start: string | null;
+  period_income: number;
+  period_expense: number;
 };
 
 const periodDateFormatter = new Intl.DateTimeFormat("tr-TR", {
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
         Hoş geldin, {user?.user_metadata?.full_name || user?.email} 👋
       </p>
 
-      {payPeriod?.configured && (
+      {payPeriod && (
         <div className="animate-fade-in-up mt-6 rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Wallet className="h-4 w-4" />
@@ -141,10 +141,21 @@ export default async function DashboardPage() {
             {currencyFormatter.format(payPeriod.balance)}
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            {payPeriod.period_start &&
-              periodDateFormatter.format(new Date(`${payPeriod.period_start}T00:00:00`))}{" "}
-            – bugün · {currencyFormatter.format(payPeriod.income)} gelir,{" "}
-            {currencyFormatter.format(payPeriod.expense)} gider
+            {payPeriod.period_configured ? (
+              <>
+                {payPeriod.period_start &&
+                  periodDateFormatter.format(
+                    new Date(`${payPeriod.period_start}T00:00:00`)
+                  )}{" "}
+                – bugün: {currencyFormatter.format(payPeriod.period_income)} gelir,{" "}
+                {currencyFormatter.format(payPeriod.period_expense)} gider
+              </>
+            ) : (
+              <>
+                Tüm zamanların gelir-gider bakiyesi. Dönem başlangıç günü
+                belirlemek için Ayarlar&apos;a git.
+              </>
+            )}
           </p>
         </div>
       )}
@@ -158,13 +169,21 @@ export default async function DashboardPage() {
           <ul className="space-y-2">
             {highlights.map((h, i) => {
               const Icon =
-                h.kind === "up" ? TrendingUp : h.kind === "down" ? TrendingDown : Info;
+                h.kind === "up"
+                  ? TrendingUp
+                  : h.kind === "down"
+                    ? TrendingDown
+                    : h.kind === "warning"
+                      ? AlertTriangle
+                      : Info;
               const color =
                 h.kind === "up"
                   ? "text-red-600"
                   : h.kind === "down"
                     ? "text-green-600"
-                    : "text-gray-500";
+                    : h.kind === "warning"
+                      ? "text-amber-600"
+                      : "text-gray-500";
               return (
                 <li
                   key={i}
