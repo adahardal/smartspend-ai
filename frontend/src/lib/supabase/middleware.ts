@@ -34,7 +34,8 @@ export async function updateSession(request: NextRequest) {
   const isProtectedPage =
     path.startsWith("/dashboard") ||
     path.startsWith("/transactions") ||
-    path.startsWith("/budgets");
+    path.startsWith("/budgets") ||
+    path.startsWith("/coach");
 
   // Giriş yapmamış kullanıcı korumalı sayfaya gidemez
   if (!user && isProtectedPage) {

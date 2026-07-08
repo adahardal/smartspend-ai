@@ -1,6 +1,12 @@
 "use client";
 
-import { LayoutDashboard, Receipt, Target, Wallet } from "lucide-react";
+import {
+  LayoutDashboard,
+  MessageCircle,
+  Receipt,
+  Target,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./logout-button";
@@ -9,6 +15,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "İşlemler", icon: Receipt },
   { href: "/budgets", label: "Bütçeler", icon: Target },
+  { href: "/coach", label: "Koç", icon: MessageCircle },
 ];
 
 export function NavBar({ userEmail }: { userEmail: string | null }) {
