@@ -25,9 +25,14 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SmartSpend AI API")
 
+allowed_origins = ["http://localhost:3000"]
+extra_origins = os.environ.get("FRONTEND_URL")
+if extra_origins:
+    allowed_origins += [origin.strip() for origin in extra_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
