@@ -92,3 +92,19 @@ class UserSettings(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class SavingsGoal(Base):
+    __tablename__ = "savings_goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    target_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    current_amount: Mapped[float] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
+    )
+    target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
