@@ -1,11 +1,15 @@
 "use client";
 
-import { Settings as SettingsIcon } from "lucide-react";
+import { AlertTriangle, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 
+const DELETE_CONFIRM_WORD = "SİL";
+
 export default function SettingsPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [periodStartDay, setPeriodStartDay] = useState("");
   const [loading, setLoading] = useState(true);
@@ -13,6 +17,11 @@ export default function SettingsPage() {
   const [savingPeriod, setSavingPeriod] = useState(false);
   const [nameMessage, setNameMessage] = useState("");
   const [periodMessage, setPeriodMessage] = useState("");
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -56,6 +65,22 @@ export default function SettingsPage() {
 
     setPeriodMessage(res.ok ? "Kaydedildi" : "Kaydedilemedi");
     setSavingPeriod(false);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    setDeleteError("");
+
+    const res = await apiFetch("/api/v1/settings/account", { method: "DELETE" });
+    if (res.ok) {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push("/login");
+      router.refresh();
+    } else {
+      setDeleteError("Hesap silinemedi. Tekrar dene.");
+      setDeleting(false);
+    }
   }
 
   if (loading) return null;
@@ -117,6 +142,65 @@ export default function SettingsPage() {
           </button>
         </div>
         {periodMessage && <p className="text-sm text-gray-500">{periodMessage}</p>}
+      </div>
+
+      <div
+        className="animate-fade-in-up mt-4 space-y-3 rounded-xl border border-red-200 bg-white p-4 shadow-sm"
+        style={{ animationDelay: "120ms" }}
+      >
+        <h2 className="flex items-center gap-2 font-semibold text-red-700">
+          <AlertTriangle className="h-4 w-4" />
+          Tehlikeli Bölge
+        </h2>
+        <p className="text-sm text-gray-500">
+          Hesabını sildiğinde tüm işlemlerin, kategorilerin, bütçelerin,
+          aboneliklerin ve ayarların kalıcı olarak silinir. Bu işlem geri
+          alınamaz.
+        </p>
+
+        {!showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            Hesabımı Sil
+          </button>
+        ) : (
+          <div className="space-y-2 rounded-lg bg-red-50 p-3">
+            <p className="text-sm font-medium text-red-700">
+              Emin misin? Devam etmek için aşağıya{" "}
+              <span className="font-bold">{DELETE_CONFIRM_WORD}</span> yaz.
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="w-full rounded-lg border border-red-300 p-2 text-sm shadow-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== DELETE_CONFIRM_WORD || deleting}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? "Siliniyor..." : "Kalıcı Olarak Sil"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteConfirmText("");
+                  setDeleteError("");
+                }}
+                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+              >
+                Vazgeç
+              </button>
+            </div>
+            {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+          </div>
+        )}
       </div>
     </div>
   );

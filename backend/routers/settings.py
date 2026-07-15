@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import models
@@ -41,3 +42,21 @@ def update_settings(
     db.commit()
     db.refresh(settings)
     return SettingsOut(period_start_day=settings.period_start_day)
+
+
+@router.delete("/account", status_code=204)
+def delete_account(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    db.execute(
+        text("delete from manual_subscriptions where user_id = :uid"), {"uid": user_id}
+    )
+    db.execute(text("delete from budgets where user_id = :uid"), {"uid": user_id})
+    db.execute(text("delete from transactions where user_id = :uid"), {"uid": user_id})
+    db.execute(text("delete from categories where user_id = :uid"), {"uid": user_id})
+    db.execute(
+        text("delete from user_settings where user_id = :uid"), {"uid": user_id}
+    )
+    db.execute(text("delete from auth.users where id = :uid"), {"uid": user_id})
+    db.commit()
