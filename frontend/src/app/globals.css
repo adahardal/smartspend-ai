@@ -45,3 +45,99 @@ body {
     animation: none;
   }
 }
+
+/*
+ * Dark mode: overrides Tailwind's generated utility classes directly so
+ * every page/component gets it automatically, without adding dark: variants
+ * everywhere. Follows the OS/browser color-scheme preference (no toggle).
+ */
+@media (prefers-color-scheme: dark) {
+  .bg-white {
+    background-color: #18181b;
+  }
+  .bg-gray-50 {
+    background-color: #09090b;
+  }
+  .bg-gray-100 {
+    background-color: #27272a;
+  }
+  .bg-gray-200 {
+    background-color: #3f3f46;
+  }
+
+  .border,
+  .border-t,
+  .border-b,
+  .border-l,
+  .border-r {
+    border-color: #3f3f46;
+  }
+
+  .text-gray-900 {
+    color: #f4f4f5;
+  }
+  .text-gray-800 {
+    color: #e4e4e7;
+  }
+  .text-gray-700 {
+    color: #d4d4d8;
+  }
+  .text-gray-600 {
+    color: #a1a1aa;
+  }
+  .text-gray-500 {
+    color: #a1a1aa;
+  }
+  .text-gray-400 {
+    color: #71717a;
+  }
+
+  .hover\:bg-gray-50:hover {
+    background-color: #27272a;
+  }
+  .hover\:bg-gray-100:hover {
+    background-color: #3f3f46;
+  }
+  .hover\:text-black:hover {
+    color: #f4f4f5;
+  }
+  .hover\:border-gray-400:hover {
+    border-color: #52525b;
+  }
+
+  .bg-indigo-50 {
+    background-color: rgba(99, 102, 241, 0.15);
+  }
+  .border-indigo-200 {
+    border-color: rgba(129, 140, 248, 0.35);
+  }
+  .bg-red-50 {
+    background-color: rgba(239, 68, 68, 0.12);
+  }
+  .bg-green-50 {
+    background-color: rgba(34, 197, 94, 0.12);
+  }
+  .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.12);
+  }
+
+  input,
+  select,
+  textarea {
+    background-color: #18181b;
+    color: #f4f4f5;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: #71717a;
+  }
+
+  .shadow-sm,
+  .shadow-md {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  header.bg-white\/80 {
+    background-color: rgba(24, 24, 27, 0.8);
+  }
+}
