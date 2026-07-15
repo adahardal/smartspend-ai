@@ -31,8 +31,10 @@ export function DateField({
       onClick={() => {
         const el = inputRef.current;
         if (!el) return;
-        if ("showPicker" in el) {
-          (el as HTMLInputElement & { showPicker: () => void }).showPicker();
+        const showPicker = (el as HTMLInputElement & { showPicker?: () => void })
+          .showPicker;
+        if (showPicker) {
+          showPicker.call(el);
         } else {
           el.focus();
         }
