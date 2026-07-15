@@ -1,10 +1,16 @@
 "use client";
 
-import { AlertTriangle, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getCurrentPushSubscription,
+  isPushSupported,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "@/lib/push";
 
 const DELETE_CONFIRM_WORD = "SİL";
 
@@ -23,6 +29,10 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMessage, setPushMessage] = useState("");
+
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
@@ -37,6 +47,8 @@ export default function SettingsPage() {
         }
       })
       .finally(() => setLoading(false));
+
+    getCurrentPushSubscription().then((sub) => setPushSubscribed(!!sub));
   }, []);
 
   async function handleSaveName() {
@@ -65,6 +77,26 @@ export default function SettingsPage() {
 
     setPeriodMessage(res.ok ? "Kaydedildi" : "Kaydedilemedi");
     setSavingPeriod(false);
+  }
+
+  async function handleEnablePush() {
+    setPushBusy(true);
+    setPushMessage("");
+    const result = await subscribeToPush();
+    if (result.ok) {
+      setPushSubscribed(true);
+    } else {
+      setPushMessage(result.error ?? "Bildirimler açılamadı");
+    }
+    setPushBusy(false);
+  }
+
+  async function handleDisablePush() {
+    setPushBusy(true);
+    setPushMessage("");
+    await unsubscribeFromPush();
+    setPushSubscribed(false);
+    setPushBusy(false);
   }
 
   async function handleDeleteAccount() {
@@ -144,9 +176,42 @@ export default function SettingsPage() {
         {periodMessage && <p className="text-sm text-gray-500">{periodMessage}</p>}
       </div>
 
+      {isPushSupported() && (
+        <div
+          className="animate-fade-in-up mt-4 space-y-3 rounded-xl border bg-white p-4 shadow-sm"
+          style={{ animationDelay: "90ms" }}
+        >
+          <h2 className="font-semibold">Bildirimler</h2>
+          <p className="text-sm text-gray-500">
+            Bir bütçenin limitine yaklaştığında (%80 ve üzeri) telefonuna/tarayıcına
+            bildirim gönderelim.
+          </p>
+          {pushSubscribed ? (
+            <button
+              onClick={handleDisablePush}
+              disabled={pushBusy}
+              className="flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              <BellOff className="h-4 w-4" />
+              {pushBusy ? "İşleniyor..." : "Bildirimleri Kapat"}
+            </button>
+          ) : (
+            <button
+              onClick={handleEnablePush}
+              disabled={pushBusy}
+              className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              <Bell className="h-4 w-4" />
+              {pushBusy ? "İşleniyor..." : "Bildirimleri Aç"}
+            </button>
+          )}
+          {pushMessage && <p className="text-sm text-red-600">{pushMessage}</p>}
+        </div>
+      )}
+
       <div
         className="animate-fade-in-up mt-4 space-y-3 rounded-xl border border-red-200 bg-white p-4 shadow-sm"
-        style={{ animationDelay: "120ms" }}
+        style={{ animationDelay: "150ms" }}
       >
         <h2 className="flex items-center gap-2 font-semibold text-red-700">
           <AlertTriangle className="h-4 w-4" />

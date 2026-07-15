@@ -61,5 +61,8 @@ def delete_account(
     db.execute(
         text("delete from savings_goals where user_id = :uid"), {"uid": user_id}
     )
+    db.execute(
+        text("delete from push_subscriptions where user_id = :uid"), {"uid": user_id}
+    )
     db.execute(text("delete from auth.users where id = :uid"), {"uid": user_id})
     db.commit()

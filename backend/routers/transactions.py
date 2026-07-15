@@ -1,15 +1,18 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import models
 import schemas
 from database import get_db
+from push import send_push_to_user
 from security import get_current_user_id
 
 router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"])
+
+BUDGET_WARNING_PCT = 80.0
 
 
 def _get_owned_category(db: Session, category_id: int, user_id: str) -> models.Category:
@@ -17,6 +20,49 @@ def _get_owned_category(db: Session, category_id: int, user_id: str) -> models.C
     if category is None or category.user_id != user_id:
         raise HTTPException(status_code=404, detail="Kategori bulunamadı")
     return category
+
+
+def _maybe_notify_budget_threshold(
+    db: Session, user_id: str, category_id: int, new_amount: float, tx_date: date
+) -> None:
+    budget = db.scalar(
+        select(models.Budget).where(
+            models.Budget.user_id == user_id, models.Budget.category_id == category_id
+        )
+    )
+    if budget is None or float(budget.amount) <= 0:
+        return
+
+    month_start = date(tx_date.year, tx_date.month, 1)
+    if tx_date < month_start:
+        return
+
+    spent_before = float(
+        db.scalar(
+            select(func.coalesce(func.sum(models.Transaction.amount), 0)).where(
+                models.Transaction.user_id == user_id,
+                models.Transaction.category_id == category_id,
+                models.Transaction.type == "expense",
+                models.Transaction.date >= month_start,
+            )
+        )
+        or 0
+    ) - new_amount
+    spent_after = spent_before + new_amount
+    amount = float(budget.amount)
+
+    pct_before = spent_before / amount * 100
+    pct_after = spent_after / amount * 100
+    if pct_before < BUDGET_WARNING_PCT <= pct_after:
+        category = db.get(models.Category, category_id)
+        name = category.name if category else "Bütçe"
+        send_push_to_user(
+            db,
+            user_id,
+            title="Bütçe uyarısı",
+            body=f"{name} bütçende limitin %{pct_after:.0f}'ine ulaştın "
+            f"({spent_after:.0f} TL / {amount:.0f} TL).",
+        )
 
 
 @router.get("", response_model=list[schemas.TransactionOut])
@@ -57,6 +103,16 @@ def create_transaction(
     db.add(transaction)
     db.commit()
     db.refresh(transaction)
+
+    if transaction.type == "expense" and transaction.category_id is not None:
+        _maybe_notify_budget_threshold(
+            db,
+            user_id,
+            transaction.category_id,
+            float(transaction.amount),
+            transaction.date,
+        )
+
     return transaction
 
 

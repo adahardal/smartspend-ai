@@ -16,6 +16,7 @@ from routers import (  # noqa: E402
     goals,
     imports,
     insights,
+    push,
     settings,
     summary,
     transactions,
@@ -49,6 +50,7 @@ app.include_router(coach.router)
 app.include_router(insights.router)
 app.include_router(settings.router)
 app.include_router(goals.router)
+app.include_router(push.router)
 
 
 @app.get("/healthz")
